@@ -214,8 +214,8 @@ iSetTransparentColor(255,255,255,0.2);
         iSetColor(255, 255, 0);
         iText(400, 500, "Help / Instructions", GLUT_BITMAP_TIMES_ROMAN_24);
         iSetColor(255, 255, 255);
-        iText(200, 450, "Player 1 : WASD to move, S=Shoot, H=Header");
-        iText(200, 400, "Player 2 : Arrow Keys to move, K=Shoot, L=Header");
+        iText(200, 450, "Player 1 : WASD to move, S=Shoot  ");
+        iText(200, 400, "Player 2 : Arrow Keys to move, K=Shoot  ");
         iText(200, 350, "First to score wins");
         iText(400, 200, "Press 'b' to go back to Menu");
     }
@@ -274,7 +274,7 @@ iSetTransparentColor(255,255,255,0.2);
     char time[50];
     sprintf(scoreText1, "Player 1: %d", scoreP1);
     sprintf(scoreText2, "Player 2: %d", scoreP2);
-    sprintf(time,"\n   TIME: %0.2f",time_count);
+    sprintf(time,"   TIME: %0.2f",time_count);
 
     iText(420, 580, scoreText1, GLUT_BITMAP_HELVETICA_18);
     iText(520, 580, scoreText2, GLUT_BITMAP_HELVETICA_18);
