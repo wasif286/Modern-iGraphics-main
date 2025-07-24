@@ -4,6 +4,7 @@
 #include<math.h>
 #include <iostream>
 #include "iSound.h"
+#include <fcntl.h>
 using namespace std;
 #define SCREEN_HEIGHT 600
 #define SCREEN_WIDTH 1000
@@ -16,14 +17,107 @@ int goal=0;
 int goalanicount=0;
 int isShowingGoalAnimation = 0;
 // Game States:
-enum GameState { MENU, HELP, GAME };
-int currentState = MENU;
-int menuSelection = 0; // 0=Start, 1=Help, 2=Exit
+enum GameState {NAME,MENU,CONTINUE,LEADREBOARD, HELP,GAME};
+int currentState=NAME ;
+int menuSelection = 0; // 0=Start, 1=Continue ,2=Help, 3=Leaderboard, 4= Exit
 
 double ball_x1=10,ball_y1=10,radius=15,dx=5,head_x=450,head_x2=550,head_y=100,head_y2=100,head_radius=25;
-int ball_x =500,ball_y=200,timer_start=0,ball_touched_ceil=0,ball_shoot=0,kick_off=0,p2_jump=0,up=10,p1_jump=0,timer2=0;
+int ball_x =500,ball_y=200,timer_start=0,ball_touched_ceil=0,ball_shoot=0,kick_off=0,p2_jump=0,up=10,p1_jump=0,timer2=0,ball_touched_ground=0;
 double leg_top=30 ,leg_top2=30, leg_bottom=0, leg_bottom2=0,dy=3,time_count=0;
+int leaderboard_update = 0;
+char input_name[30];
+int input_index= 0,taking_input=1;
+int goal_diff[5];
+int flag=0,flag2=0; //to not call leaderboard update too many times unnecessarily
+typedef struct {
+    char name[30];
+    int win;
+}player;
+int a[5], b[5];
+char s1[5][20], s2[5][20];
+player player1,player2;
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+void sort_leaderboard()
+{
+    int i,j;
+    for(i=0;i<5;i++) goal_diff[i] = abs(a[i]-b[i]);
+    for(i=0;i<4;i++)
+        for(j=i+1;j<5;j++)
+            if(goal_diff[j]>goal_diff[i])
+            {
+                int t;
+                char c[30];
+                t=  goal_diff[i];
+                goal_diff[i] = goal_diff[j];
+                goal_diff[j] = t;
+                t= a[i];
+                a[i]=a[j];
+                a[j]=t;
+                t=b[i];
+                b[i]=b[j];
+                b[j]=t;
+                strcpy(c,s1[i]);
+                strcpy(s1[i],s1[j]);
+                strcpy(s1[j],c);
+                strcpy(c,s2[i]);
+                strcpy(s2[i],s2[j]);
+                strcpy(s2[j],c);
+            }
+}
 
+void update_leaderboard(int diff, char name1[], char name2[])
+{
+    FILE *fp = fopen("leaderboard.txt", "r");
+    if (!fp) return;
+
+    int i = 0, min = 1000, min_idx = -1;
+
+    while (i < 5 && fscanf(fp, "%s %d-%d %s", s1[i], &a[i], &b[i], s2[i]) == 4) {
+        int curr_diff = abs(a[i] - b[i]);
+        if (curr_diff < min) {
+            min = curr_diff;
+            min_idx = i;
+        }
+        i++;
+    }
+    fclose(fp);
+
+    int entry_count = i; // Number of valid lines read
+
+    if (entry_count < 5) {
+        // Fill next slot with current match
+        strcpy(s1[entry_count], name1);
+        strcpy(s2[entry_count], name2);
+        a[entry_count] = scoreP1;
+        b[entry_count] = scoreP2;
+        entry_count++;
+        printf("Inserted as new entry (fewer than 5 entries).\n");
+    }
+    else if (min_idx != -1 && (diff > min || (diff == min && (scoreP1 + scoreP2 > a[min_idx] + b[min_idx])))) {
+        strcpy(s1[min_idx], name1);
+        strcpy(s2[min_idx], name2);
+        a[min_idx] = scoreP1;
+        b[min_idx] = scoreP2;
+        printf("Leaderboard updated at index %d.\n", min_idx);
+    }
+    else {
+        printf("Leaderboard not updated.\n");
+    }
+
+    // Write back only the valid part
+    fp = fopen("leaderboard.txt", "w");
+    for (i = 0; i < entry_count; i++)
+        fprintf(fp, "%s %d-%d %s\n", s1[i], a[i], b[i], s2[i]);
+    fclose(fp);
+    fp= fopen("leaderboard.txt", "r");
+    i=0;
+    while (i < 5 && fscanf(fp, "%s %d-%d %s", s1[i], &a[i], &b[i], s2[i]) == 4)
+     i++;
+    fclose(fp);
+}
 void jump()
 { // when heading while jumping player should not go up to avoid multitple collisions
    if(p2_jump==1)
@@ -64,11 +158,12 @@ void ball_move()
     if(kick_off ==0) {ball_x =500;
                       if(ball_y >=200 || ball_y <=head_radius) dy=-dy;
                        ball_y+=dy;
-                       // goal = 0;
+                        goal = 0;
                         goalanicount= 0;}
     if(kick_off == 1) ball_x+=dx;
    // This is the parabolic eq of the ball when headed.
-   if(ball_touched_ceil == 0 && ball_shoot == 0 && kick_off ==1) ball_y= (ball_x-ball_x1-300)*(ball_x-ball_x1-300)/(-450) + ball_y1 + 200;
+   if(ball_touched_ceil == 0 && ball_touched_ground ==0 && ball_shoot == 0 && kick_off ==1) ball_y= (ball_x-ball_x1-300)*(ball_x-ball_x1-300)/(-450) + ball_y1 + 200;
+   else if(ball_touched_ground==1)  ball_y= (ball_x-ball_x1-300)*(ball_x-ball_x1-300)/(-900) + ball_y1 + 100;
    else if(ball_touched_ceil ==1) ball_y-=10;
    if((((ball_x > head_x)? (ball_x - head_x) : (head_x - ball_x) )<=40) && ball_y <= head_y + head_radius && ball_y >=leg_bottom)
         {   
@@ -84,6 +179,7 @@ void ball_move()
         }
      ball_touched_ceil=0;
      ball_shoot =0;
+     ball_touched_ground=0;
         }
     else if((((ball_x > head_x2)? (ball_x - head_x2) : (head_x2 - ball_x) )<=40) && ball_y <= head_y2 + head_radius && ball_y >=leg_bottom2)
         {
@@ -102,6 +198,7 @@ void ball_move()
         }
      ball_touched_ceil=0;
      ball_shoot =0;
+     ball_touched_ground=0;
         }
    if(ball_x + radius>SCREEN_WIDTH ){
     iPlaySound("assets/sounds/kick.wav", false,100);
@@ -159,6 +256,7 @@ void ball_move()
         }
     ball_touched_ceil=0;
     ball_shoot =0;
+    ball_touched_ground=1;
    }
     if((ball_x < 40 && ball_y + radius < 150) || (ball_x > 960 && ball_y + radius < 150))
     { 
@@ -192,12 +290,12 @@ void ball_move()
     // leg_bottom2 =0;
      ball_x1=10,ball_y1=10,radius=15,dx=5,head_x=450,head_x2=550,head_y=100,head_y2=100,head_radius=25;
  ball_x =500,ball_y=200,ball_touched_ceil=0,ball_shoot=0,kick_off=0,p2_jump=0,up=10,p1_jump=0;
-leg_top=30 ,leg_top2=30, leg_bottom=0, leg_bottom2=0,dy=3;
+leg_top=30 ,leg_top2=30, leg_bottom=0, leg_bottom2=0,dy=3,ball_touched_ground=0;
 
 }
 
-time_count +=.01;
-if(time_count>93.90){
+if(currentState==GAME) time_count +=.01;
+/*if(time_count>93.90){
     iPauseTimer(0);
     time_count=0;
      scoreP1 = 0;
@@ -207,12 +305,12 @@ scoreP2 = 0;
  isShowingGoalAnimation = 0;
   ball_x1=10,ball_y1=10,radius=15,dx=5,head_x=450,head_x2=550,head_y=100,head_y2=100,head_radius=25;
  ball_x =500,ball_y=200,ball_touched_ceil=0,ball_shoot=0,kick_off=0,p2_jump=0,up=10,p1_jump=0;
-leg_top=30 ,leg_top2=30, leg_bottom=0, leg_bottom2=0,dy=3;
+leg_top=30 ,leg_top2=30, leg_bottom=0, leg_bottom2=0,dy=3,ball_touched_ground=0;
 
     currentState = MENU;
 
 
-}
+}*/
 }
    
 
@@ -238,6 +336,20 @@ void loadResources()
 function iDraw() is called again and again by the system.
 */
 void iDraw() {
+    if(taking_input){
+    iClear();
+    iSetColor(255, 255, 255);
+
+    if (taking_input == 1) {
+        iText(300, 400, "Enter Player 1 Name:", GLUT_BITMAP_TIMES_ROMAN_24);
+    } else if (taking_input == 2) {
+        iText(300, 400, "Enter Player 2 Name:", GLUT_BITMAP_TIMES_ROMAN_24);
+    }
+
+    iText(300, 350, input_name, GLUT_BITMAP_HELVETICA_18);
+    return;
+}
+
     iClear();
     
     if(currentState == MENU) {
@@ -261,25 +373,45 @@ iSetTransparentColor(255,255,255,0.2);
         iText(400, 550, "2 Player Football Game", GLUT_BITMAP_TIMES_ROMAN_24);
         
         if(menuSelection == 0) iSetColor(255, 0, 0); else iSetColor(255, 255, 255);
-        iText(450, 350, "Start Game", GLUT_BITMAP_HELVETICA_18);
-        
+        iText(450, 400, "Start Game", GLUT_BITMAP_HELVETICA_18);
+
         if(menuSelection == 1) iSetColor(255, 0, 0); else iSetColor(255, 255, 255);
-        iText(450, 300, "   Help   ", GLUT_BITMAP_HELVETICA_18);
+        iText(450, 350, "  Continue   ", GLUT_BITMAP_HELVETICA_18);
         
         if(menuSelection == 2) iSetColor(255, 0, 0); else iSetColor(255, 255, 255);
-        iText(450, 250, "   Exit  ", GLUT_BITMAP_HELVETICA_18);
+        iText(450, 300, "   Help   ", GLUT_BITMAP_HELVETICA_18);
+
+        if(menuSelection == 3) iSetColor(255, 0, 0); else iSetColor(255, 255, 255);
+        iText(450, 250, "   Leaderboard   ", GLUT_BITMAP_HELVETICA_18);
+        
+        if(menuSelection == 4) iSetColor(255, 0, 0); else iSetColor(255, 255, 255);
+        iText(450, 200, "   Exit  ", GLUT_BITMAP_HELVETICA_18);
     }
     
     else if(currentState == HELP) {
         iSetColor(255, 255, 0);
         iText(400, 500, "Help / Instructions", GLUT_BITMAP_TIMES_ROMAN_24);
         iSetColor(255, 255, 255);
-        iText(200, 450, "Player 1 : WASD to move, S=Shoot, H=Header");
-        iText(200, 400, "Player 2 : Arrow Keys to move, K=Shoot, L=Header");
-        iText(200, 350, "First to score wins");
+        iText(200, 450, "Player 1 : WASD to move");
+        iText(200, 400, "Player 2 : Arrow Keys to move");
         iText(400, 200, "Press 'b' to go back to Menu");
     }
-    
+    else if(currentState==LEADREBOARD)
+    { 
+        iSetColor(255, 255, 0);
+        iText(400, 500, "Top 5 matches (Hall of fame)", GLUT_BITMAP_TIMES_ROMAN_24);
+        if(flag==0){update_leaderboard(-1,player1.name,player2.name);
+            flag=1;}
+        //sort the leaderboard
+        sort_leaderboard();
+    for (int i = 0; i <5; i++) {
+        char line[200];
+        sprintf(line,"%s %d-%d %s",s1[i],a[i],b[i],s2[i]);
+        iText(300, 450 - i * 30, line, GLUT_BITMAP_HELVETICA_18);
+    }
+}
+
+
 
     
     else if(currentState == GAME) {
@@ -330,37 +462,55 @@ iSetTransparentColor(255,255,255,0.2);
     iFilledRectangle(390, 570, 230, 30);
 
     // Set text color
-    iSetColor(255, 255, 255);  // white text
-
+   
     // Draw score texts
     char scoreText1[20];
     char scoreText2[20];
     char time[50];
     
+     iSetColor(255, 0, 0);  // red text
 
      sprintf(time,"   TIME: %0.2f",time_count);
-    sprintf(scoreText1, "Player 1: %d", scoreP1);
-    sprintf(scoreText2, "Player 2: %d", scoreP2);
+    iSetColor(255, 255, 255);  // white text
+
+    sprintf(scoreText1, "%s: %d ",player1.name, scoreP1);
+    sprintf(scoreText2, "%s: %d ",player2.name, scoreP2);
     
 
     iText(420, 580, scoreText1, GLUT_BITMAP_HELVETICA_18);
     iText(520, 580, scoreText2, GLUT_BITMAP_HELVETICA_18);
     if(time_count<=90.00){iText(660,580,time,GLUT_BITMAP_HELVETICA_18);}
 
-    if(time_count>90.00){
+    if(time_count>90){
+        iPauseTimer(0);
+        char win_text [50];
         iSetColor(0, 0, 0);  // black background/
     iFilledRectangle(100, 30, 800, 540);
      iSetColor(255, 255, 255);
-    if(scoreP1>scoreP2){iText(490, 320, "HURRAH", GLUT_BITMAP_HELVETICA_18);
-
-        iText(420, 290, "Player 1 has won the match", GLUT_BITMAP_HELVETICA_18);}
-       else if(scoreP1<scoreP2){iText(490, 320, "HURRAH", GLUT_BITMAP_HELVETICA_18);
-
-        iText(420, 290, "Player 2 has won the match", GLUT_BITMAP_HELVETICA_18);}
-        else {iText(425, 320, "YOU TWO PLAYED WELL", GLUT_BITMAP_HELVETICA_18);
-
-        iText(460, 290, "The match is draw", GLUT_BITMAP_HELVETICA_18);}
-
+    if(scoreP1>scoreP2)
+      {
+        strcpy(win_text,player1.name);
+        strcat(win_text," has won the match");
+        iText(490, 320, "HURRAH", GLUT_BITMAP_HELVETICA_18);
+        iText(420, 290,win_text, GLUT_BITMAP_HELVETICA_18);
+      }
+    else if(scoreP1<scoreP2)
+      {
+        strcpy(win_text,player2.name);
+        strcat(win_text," has won the match");
+        iText(490, 320, "HURRAH", GLUT_BITMAP_HELVETICA_18);
+        iText(420, 290,win_text, GLUT_BITMAP_HELVETICA_18);
+      }
+    else 
+      { iText(425, 320, "YOU TWO PLAYED WELL", GLUT_BITMAP_HELVETICA_18);
+        iText(460, 290, "The match is draw", GLUT_BITMAP_HELVETICA_18);
+      }
+    iText(430,260,"Press 'b' to go back to menu",GLUT_BITMAP_HELVETICA_18);
+    // update leaderboard
+     int goal_diff = fabs(scoreP1 - scoreP2);
+    if(leaderboard_update==0)update_leaderboard(goal_diff,player1.name,player2.name);
+    leaderboard_update=1;
+    sort_leaderboard();
     }
 
 if (goal) {
@@ -425,12 +575,72 @@ key- holds the ASCII value of the key pressed.
 
 void iKeyboard(unsigned char key)
 {
-if(currentState == MENU) {
+  if(currentState==LEADREBOARD && key=='b') {currentState= MENU;
+    iResumeTimer(0);}
+if(taking_input)
+{  
+   if(taking_input==1)
+   {
+    if(key == '\r'){ input_name[input_index] ='\0';
+    input_index=0;
+    taking_input=2;
+    strcpy(player1.name,input_name);
+     input_name[input_index]='\0';
+     /* now we have to find or add players using these input names.*/
+     }
+    else if(key =='\b'){
+        if(input_index>0) input_index--;
+        input_name[input_index] ='\0';
+    }
+    else {
+        input_name[input_index++] = key ;
+        input_name[input_index] ='\0';
+    }
+   }
+    else if(taking_input==2)
+   {
+    if(key == '\r'){ input_name[input_index] ='\0';
+    input_index=0;
+    taking_input=0;
+    strcpy(player2.name,input_name);
+    key = 'a';//the key is at '\r' so enter will be treated as start game if key is '\r'
+    currentState= MENU;
+    /* now we have to find or add players using these input names.*/
+    }
+    else if(key =='\b'){
+        if(input_index>0) input_index--;
+        input_name[input_index] ='\0';
+    }
+    else {
+        input_name[input_index++] = key ;
+        input_name[input_index] ='\0';
+    }
+   }
+  
+
+}
+if(currentState == MENU && taking_input==0) {
         if(key == '\r') { // ENTER pressed
             iPlaySound("assets/sounds/press.wav", false,100);
-            if(menuSelection == 0) currentState = GAME;
-            if(menuSelection == 1) currentState = HELP;
-            if(menuSelection == 2) exit(0);
+            if(menuSelection == 0){ 
+                time_count=0;
+                scoreP1 = 0;
+                scoreP2 = 0;
+                goal=0;
+                goalanicount=0;
+                isShowingGoalAnimation = 0;
+                ball_x1=10,ball_y1=10,radius=15,dx=5,head_x=450,head_x2=550,head_y=100,head_y2=100,head_radius=25;
+                ball_x =500,ball_y=200,ball_touched_ceil=0,ball_shoot=0,kick_off=0,p2_jump=0,up=10,p1_jump=0;
+                leg_top=30 ,leg_top2=30, leg_bottom=0, leg_bottom2=0,dy=3,ball_touched_ground=0;
+               currentState = GAME;
+               leaderboard_update=0;
+               iResumeTimer(0);
+            }
+            if(menuSelection == 1) {currentState = GAME;
+                iResumeTimer(0);}
+            if(menuSelection == 2) currentState = HELP;
+            if(menuSelection == 3) currentState =LEADREBOARD;
+            if(menuSelection==4) exit(0);
         }
     }
     
@@ -443,19 +653,20 @@ else if(currentState == GAME) {
     switch (key)
     {
         case 'b':
-{    iPauseTimer(0);  // pause ball movement timer
+    {iPauseTimer(0);  // pause ball movement timer
     currentState = MENU;
     break;}
       
 
-    case 'q':{
+    /*case 'q':{
         // do something with 'q'
         iPauseTimer(0);
-        break;}
-    case 'r':{
+        break;}*/
+   /* case 'r':{
         iResumeTimer(0);
-        break;
-    }
+        break;*/
+    case '\r':{ iResumeTimer(0);
+    break;}
        
     case 's':{
         if((((ball_x > head_x)? (ball_x - head_x) : (head_x - ball_x) )<=40) && ball_y <= head_y + head_radius && ball_y >=leg_bottom)
@@ -511,10 +722,10 @@ void iSpecialKeyboard(unsigned char key)
      if(currentState == MENU) {
         if(key == GLUT_KEY_DOWN) {
             iPlaySound("assets/sounds/press.wav", false,100);
-            menuSelection = (menuSelection + 1) % 3;
+            menuSelection = (menuSelection + 1) % 5;
         }
         if(key == GLUT_KEY_UP) {iPlaySound("assets/sounds/press.wav", false,100);
-            menuSelection = (menuSelection - 1 + 3) % 3;
+            menuSelection = ((menuSelection - 1 )>=0? menuSelection-1 : menuSelection-1+5) % 5;
         }
     }
 
@@ -529,7 +740,6 @@ void iSpecialKeyboard(unsigned char key)
      p2_jump =1;
     break;}
     case GLUT_KEY_LEFT:{
-        // collision between players
       if(head_x2>=30)
         head_x2-=30;
         else head_x2 = 25;
