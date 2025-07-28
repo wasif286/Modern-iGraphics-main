@@ -10,23 +10,24 @@ using namespace std;
 #define SCREEN_WIDTH 1000
 int menuSoundPlayed = 0;
 int kickSoundChannel = -1;
-
 int scoreP1 = 0;
 int scoreP2 = 0;
 int goal=0;
 int goalanicount=0;
 int isShowingGoalAnimation = 0;
+int current_game=0;
+int isGoldenGoal = 0;
 // Game States:
-enum GameState {NAME,MENU,CONTINUE,LEADREBOARD, HELP,GAME};
-int currentState=NAME ;
-int menuSelection = 0; // 0=Start, 1=Continue ,2=Help, 3=Leaderboard, 4= Exit
+enum GameState {MENU,GAME,CONTINUE,PRACTICE,GOLDEN_GOAL,LEADREBOARD, HELP};
+int currentState=MENU ;
+int menuSelection = 0; // 0=Start, 1=Continue ,2=practice,3=golden_goal, 4=Leaderboard,5=Help, 6= Exit
 
 double ball_x1=10,ball_y1=10,radius=15,dx=5,head_x=450,head_x2=550,head_y=100,head_y2=100,head_radius=25;
 int ball_x =500,ball_y=200,timer_start=0,ball_touched_ceil=0,ball_shoot=0,kick_off=0,p2_jump=0,up=10,p1_jump=0,timer2=0,ball_touched_ground=0;
 double leg_top=30 ,leg_top2=30, leg_bottom=0, leg_bottom2=0,dy=3,time_count=0;
-int leaderboard_update = 0;
+int leaderboard_update = 0, gg_end= 0;
 char input_name[30];
-int input_index= 0,taking_input=1;
+int input_index= 0,taking_input=0;
 int goal_diff[5];
 int flag=0,flag2=0; //to not call leaderboard update too many times unnecessarily
 typedef struct {
@@ -40,6 +41,7 @@ player player1,player2;
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+
 void sort_leaderboard()
 {
     int i,j;
@@ -101,10 +103,6 @@ void update_leaderboard(int diff, char name1[], char name2[])
         strcpy(s2[min_idx], name2);
         a[min_idx] = scoreP1;
         b[min_idx] = scoreP2;
-        printf("Leaderboard updated at index %d.\n", min_idx);
-    }
-    else {
-        printf("Leaderboard not updated.\n");
     }
 
     // Write back only the valid part
@@ -165,7 +163,7 @@ void ball_move()
    if(ball_touched_ceil == 0 && ball_touched_ground ==0 && ball_shoot == 0 && kick_off ==1) ball_y= (ball_x-ball_x1-300)*(ball_x-ball_x1-300)/(-450) + ball_y1 + 200;
    else if(ball_touched_ground==1)  ball_y= (ball_x-ball_x1-300)*(ball_x-ball_x1-300)/(-900) + ball_y1 + 100;
    else if(ball_touched_ceil ==1) ball_y-=10;
-   if((((ball_x > head_x)? (ball_x - head_x) : (head_x - ball_x) )<=40) && ball_y <= head_y + head_radius && ball_y >=leg_bottom)
+   if(currentState!=PRACTICE    && (((ball_x > head_x)? (ball_x - head_x) : (head_x - ball_x) )<=40) && ball_y <= head_y + head_radius && ball_y >=leg_bottom)
         {   
             //iStopSound();
                iPlaySound("assets/sounds/kick.wav", false,100);
@@ -209,13 +207,14 @@ void ball_move()
      ball_touched_ceil=0;
      ball_shoot=0;
    }
-   if(ball_x > 950 && ball_y + radius > 150 && ball_y - radius < 150){
+   if(ball_x > 940 && ball_y + radius > 160 && ball_y - radius < 160){
     iPlaySound("assets/sounds/kick.wav", false,100);
      ball_x1=ball_x-600;
      ball_y1 = ball_y;
      dx=-dx;
      ball_touched_ceil=0;
      ball_shoot=0; 
+
    }
    else if(ball_x < radius ){
     iPlaySound("assets/sounds/kick.wav", false,100);
@@ -226,7 +225,7 @@ void ball_move()
      ball_touched_ceil=0;
      ball_shoot=0;
    }
-   if(ball_x < 50 && ball_y + radius > 150 && ball_y - radius < 150){
+   if(ball_x <60  && ball_y + radius > 160 && ball_y - radius < 160){
     iPlaySound("assets/sounds/kick.wav", false,100);
      ball_x1 = ball_x;
      ball_y1 = ball_y;
@@ -258,7 +257,10 @@ void ball_move()
     ball_shoot =0;
     ball_touched_ground=1;
    }
-    if((ball_x < 40 && ball_y + radius < 150) || (ball_x > 960 && ball_y + radius < 150))
+  
+  
+  if(currentState==GAME)
+   { if((ball_x < 40 && ball_y + radius < 150) || (ball_x > 960 && ball_y + radius < 150))
     { 
          iPlaySound("assets/sounds/goal.wav", false,100);
         goal=1;
@@ -272,50 +274,42 @@ void ball_move()
         } else if (ball_x > 960 && ball_y + radius < 150) {
             scoreP1++;
         }
-     //sleep(1);
-    //  ball_touched_ceil =0;
-    //  ball_shoot =0;
-    //  ball_x = 500, ball_y =200;
-    // kick_off =0;
-    // dy=5;
-    // head_x = 
-    // p1_jump=0;
-    // p2_jump =0;
-    // up=10;
-    // head_y = 100;
-    // leg_top = 30;
-    // leg_bottom =0;
-    // head_y2 = 100;
-    // leg_top2 = 30;
-    // leg_bottom2 =0;
+        if(isGoldenGoal) gg_end =1;
+    
      ball_x1=10,ball_y1=10,radius=15,dx=5,head_x=450,head_x2=550,head_y=100,head_y2=100,head_radius=25;
  ball_x =500,ball_y=200,ball_touched_ceil=0,ball_shoot=0,kick_off=0,p2_jump=0,up=10,p1_jump=0;
 leg_top=30 ,leg_top2=30, leg_bottom=0, leg_bottom2=0,dy=3,ball_touched_ground=0;
 
-}
+}}
+else if (currentState==PRACTICE)
+   { if((ball_x < 40 && ball_y + radius < 150) )
+    { 
+         iPlaySound("assets/sounds/goal.wav", false,100);
+        goal=1;
+         goalanicount = 100;
+             isShowingGoalAnimation = 1; 
+         
+        // iResumeTimer(1);  // Resume the goal animation timer
 
-if(currentState==GAME) time_count +=.01;
-/*if(time_count>93.90){
-    iPauseTimer(0);
-    time_count=0;
-     scoreP1 = 0;
-scoreP2 = 0;
- goal=0;
- goalanicount=0;
- isShowingGoalAnimation = 0;
-  ball_x1=10,ball_y1=10,radius=15,dx=5,head_x=450,head_x2=550,head_y=100,head_y2=100,head_radius=25;
+        if(ball_x < 40 && ball_y + radius < 150) {
+            scoreP2++;
+        } else if (ball_x > 960 && ball_y + radius < 150) {
+            scoreP1++;
+        }
+     
+     ball_x1=10,ball_y1=10,radius=15,dx=5,head_x=450,head_x2=550,head_y=100,head_y2=100,head_radius=25;
  ball_x =500,ball_y=200,ball_touched_ceil=0,ball_shoot=0,kick_off=0,p2_jump=0,up=10,p1_jump=0;
 leg_top=30 ,leg_top2=30, leg_bottom=0, leg_bottom2=0,dy=3,ball_touched_ground=0;
 
-    currentState = MENU;
+}}
 
+if(currentState==GAME && !isGoldenGoal) time_count +=.01;
 
-}*/
 }
    
 
 
-Image bg, goalim,ball,field;
+Image bg, goalim,ball,field,field2;
 void loadResources()
 {
 	iLoadImage(&bg, "assets/images/footballbg.png");
@@ -326,29 +320,16 @@ void loadResources()
      iResizeImage(&ball, 30, 30);
      iLoadImage(&field, "assets/images/field.png");
      iResizeImage(&field, 1000, 600);
+     iLoadImage(&field2, "assets/images/field.png");
+     iResizeImage(&field2, 1000, 600);
 
-       // resize to match screen
-	// iLoadImage(&mario, "assets/images/mario.png");
-	// double marioAspectRatio = (double)mario.width / mario.height;
-	// iResizeImage(&mario, 48, 48.0 / marioAspectRatio);
+ 
 }
 /*
 function iDraw() is called again and again by the system.
 */
 void iDraw() {
-    if(taking_input){
-    iClear();
-    iSetColor(255, 255, 255);
 
-    if (taking_input == 1) {
-        iText(300, 400, "Enter Player 1 Name:", GLUT_BITMAP_TIMES_ROMAN_24);
-    } else if (taking_input == 2) {
-        iText(300, 400, "Enter Player 2 Name:", GLUT_BITMAP_TIMES_ROMAN_24);
-    }
-
-    iText(300, 350, input_name, GLUT_BITMAP_HELVETICA_18);
-    return;
-}
 
     iClear();
     
@@ -366,26 +347,37 @@ void iDraw() {
         	iShowLoadedImage(0, 0, &bg);
         iSetColor(255, 255, 255);
 iSetTransparentColor(255,255,255,0.2);
-    iFilledRectangle(445,245,100,28);
-    iFilledRectangle(445,295,100,28);
-     iFilledRectangle(445,345,100,28);
+ iFilledRectangle(445,445,150,28);
+ iFilledRectangle(445,405,150,28);
+ iFilledRectangle(445,365,150,28);
+ iFilledRectangle(445,325,150,28);
+ iFilledRectangle(445,285,150,28);
+ iFilledRectangle(445,245,150,28);
+ iFilledRectangle(445,205,150,28);
        iSetColor(255, 255, 0);
         iText(400, 550, "2 Player Football Game", GLUT_BITMAP_TIMES_ROMAN_24);
         
-        if(menuSelection == 0) iSetColor(255, 0, 0); else iSetColor(255, 255, 255);
-        iText(450, 400, "Start Game", GLUT_BITMAP_HELVETICA_18);
+        // if(menuSelection == 0) iSetColor(255, 0, 0); else iSetColor(255, 255, 255);
+        // iText(450, 400, "Start Game", GLUT_BITMAP_HELVETICA_18);
 
-        if(menuSelection == 1) iSetColor(255, 0, 0); else iSetColor(255, 255, 255);
-        iText(450, 350, "  Continue   ", GLUT_BITMAP_HELVETICA_18);
         
-        if(menuSelection == 2) iSetColor(255, 0, 0); else iSetColor(255, 255, 255);
-        iText(450, 300, "   Help   ", GLUT_BITMAP_HELVETICA_18);
+    if(menuSelection == 0) iSetColor(255, 0, 0); else iSetColor(255, 255, 255);
+iText(450, 450, "Start Match", GLUT_BITMAP_HELVETICA_18);
+if(menuSelection == 1) iSetColor(255, 0, 0); else iSetColor(255, 255, 255);
+iText(450, 410, "Continue", GLUT_BITMAP_HELVETICA_18);
+if(menuSelection == 2) iSetColor(255, 0, 0); else iSetColor(255, 255, 255);
+iText(450,370 , "Practice Match", GLUT_BITMAP_HELVETICA_18);
+if(menuSelection == 3) iSetColor(255, 0, 0); else iSetColor(255, 255, 255);
+iText(450, 330, "Golden Goal", GLUT_BITMAP_HELVETICA_18);
+if(menuSelection == 4) iSetColor(255, 0, 0); else iSetColor(255, 255, 255);
+iText(450, 290, "leaderboard", GLUT_BITMAP_HELVETICA_18);
 
-        if(menuSelection == 3) iSetColor(255, 0, 0); else iSetColor(255, 255, 255);
-        iText(450, 250, "   Leaderboard   ", GLUT_BITMAP_HELVETICA_18);
-        
-        if(menuSelection == 4) iSetColor(255, 0, 0); else iSetColor(255, 255, 255);
-        iText(450, 200, "   Exit  ", GLUT_BITMAP_HELVETICA_18);
+if(menuSelection == 5) iSetColor(255, 0, 0); else iSetColor(255, 255, 255);
+iText(450, 250, "HELP", GLUT_BITMAP_HELVETICA_18);
+if(menuSelection == 6) iSetColor(255, 0, 0); else iSetColor(255, 255, 255);
+iText(450, 210, "EXIT", GLUT_BITMAP_HELVETICA_18);
+    
+    
     }
     
     else if(currentState == HELP) {
@@ -411,10 +403,62 @@ iSetTransparentColor(255,255,255,0.2);
     }
 }
 
+    
+    else if(currentState == PRACTICE) {
+    iShowLoadedImage(0, 0, &field2);
+
+    // Single Player on right corner
+    iSetColor(0, 0, 255);
+    iFilledCircle(head_x2, head_y2, head_radius); // Player 2
+    iFilledRectangle(head_x2 - head_radius, leg_top2, 2 * head_radius, head_y2 - leg_top2 - head_radius);
+    iLine(head_x2, leg_top2, head_x2 - 20, leg_bottom2);
+    iLine(head_x2, leg_top2, head_x2 + 20, leg_bottom2);
+
+    // Ball
+    iSetColor(255, 0, 0);
+    iFilledCircle(ball_x, ball_y, radius);
+    iShowLoadedImage(ball_x - 15, ball_y - 15, &ball);
+
+    // Scoreboard (only score, no time)
+    iSetColor(0, 0, 0);  // black bar
+    iFilledRectangle(420, 570, 160, 30);
+    iSetColor(255, 255, 255);  // text
+
+    char scoreText1[20];
+    sprintf(scoreText1, "Score: %d", scoreP2);
+    iText(460, 580, scoreText1, GLUT_BITMAP_HELVETICA_18);
+
+    if(goal) {
+        iShowLoadedImage(0, 0, &goalim);
+        goalanicount--;
+        if (goalanicount <= 0) {
+            goal = 0;
+            isShowingGoalAnimation = 0;
+            goalanicount = 0;
+        }
+    }
+}
+
 
 
     
     else if(currentState == GAME) {
+
+
+
+    if(taking_input&&!current_game){
+    iClear();
+    iSetColor(255, 255, 255);
+
+    if (taking_input == 1) {
+        iText(300, 400, "Enter Player 1 Name:", GLUT_BITMAP_TIMES_ROMAN_24);
+    } else if (taking_input == 2) {
+        iText(300, 400, "Enter Player 2 Name:", GLUT_BITMAP_TIMES_ROMAN_24);
+    }
+
+    iText(300, 350, input_name, GLUT_BITMAP_HELVETICA_18);
+    return;
+}
 
  
 
@@ -479,39 +523,86 @@ iSetTransparentColor(255,255,255,0.2);
 
     iText(420, 580, scoreText1, GLUT_BITMAP_HELVETICA_18);
     iText(520, 580, scoreText2, GLUT_BITMAP_HELVETICA_18);
-    if(time_count<=90.00){iText(660,580,time,GLUT_BITMAP_HELVETICA_18);}
 
-    if(time_count>90){
-        iPauseTimer(0);
-        char win_text [50];
-        iSetColor(0, 0, 0);  // black background/
+
+if(gg_end )
+{
+     current_game=0;
+
+
+    iPauseTimer(0);
+    char win_text [50];
+    iSetColor(0, 0, 0);  // black background/
     iFilledRectangle(100, 30, 800, 540);
-     iSetColor(255, 255, 255);
-    if(scoreP1>scoreP2)
-      {
-        strcpy(win_text,player1.name);
-        strcat(win_text," has won the match");
-        iText(490, 320, "HURRAH", GLUT_BITMAP_HELVETICA_18);
-        iText(420, 290,win_text, GLUT_BITMAP_HELVETICA_18);
-      }
-    else if(scoreP1<scoreP2)
-      {
-        strcpy(win_text,player2.name);
-        strcat(win_text," has won the match");
-        iText(490, 320, "HURRAH", GLUT_BITMAP_HELVETICA_18);
-        iText(420, 290,win_text, GLUT_BITMAP_HELVETICA_18);
-      }
-    else 
-      { iText(425, 320, "YOU TWO PLAYED WELL", GLUT_BITMAP_HELVETICA_18);
-        iText(460, 290, "The match is draw", GLUT_BITMAP_HELVETICA_18);
-      }
-    iText(430,260,"Press 'b' to go back to menu",GLUT_BITMAP_HELVETICA_18);
-    // update leaderboard
-     int goal_diff = fabs(scoreP1 - scoreP2);
-    if(leaderboard_update==0)update_leaderboard(goal_diff,player1.name,player2.name);
-    leaderboard_update=1;
-    sort_leaderboard();
+    iSetColor(255, 255, 255);
+if(scoreP1>scoreP2)
+    {
+    win_text[0]='\0';
+    strcpy(win_text,player1.name);
+    strcat(win_text," has won the match");
+    iText(490, 320, "HURRAH", GLUT_BITMAP_HELVETICA_18);
+    iText(420, 290,win_text, GLUT_BITMAP_HELVETICA_18);
     }
+else if(scoreP1<scoreP2)
+    {
+    win_text[0]='\0';
+    strcpy(win_text,player2.name);
+    strcat(win_text," has won the match");
+    iText(490, 320, "HURRAH", GLUT_BITMAP_HELVETICA_18);
+    iText(420, 290,win_text, GLUT_BITMAP_HELVETICA_18);
+    }
+else 
+    { iText(425, 320, "YOU TWO PLAYED WELL", GLUT_BITMAP_HELVETICA_18);
+    iText(460, 290, "The match is draw", GLUT_BITMAP_HELVETICA_18);
+    }
+iText(430,260,"Press 'b' to go back to menu",GLUT_BITMAP_HELVETICA_18);
+// update leaderboard
+isGoldenGoal=0;
+}
+if(time_count<=90.00){iText(660,580,time,GLUT_BITMAP_HELVETICA_18);}
+
+if(time_count>90/*||(isGoldenGoal==1&&(scoreP1>=2||scoreP2>=2))*/){
+    current_game=0;
+
+
+    iPauseTimer(0);
+    char win_text [50];
+    iSetColor(0, 0, 0);  // black background/
+    iFilledRectangle(100, 30, 800, 540);
+    iSetColor(255, 255, 255);
+if(scoreP1>scoreP2)
+    {
+    win_text[0]='\0';
+    strcpy(win_text,player1.name);
+    strcat(win_text," has won the match");
+    iText(490, 320, "HURRAH", GLUT_BITMAP_HELVETICA_18);
+    iText(420, 290,win_text, GLUT_BITMAP_HELVETICA_18);
+    }
+else if(scoreP1<scoreP2)
+    {
+    win_text[0]='\0';
+    strcpy(win_text,player2.name);
+    strcat(win_text," has won the match");
+    iText(490, 320, "HURRAH", GLUT_BITMAP_HELVETICA_18);
+    iText(420, 290,win_text, GLUT_BITMAP_HELVETICA_18);
+    }
+else 
+    { iText(425, 320, "YOU TWO PLAYED WELL", GLUT_BITMAP_HELVETICA_18);
+    iText(460, 290, "The match is draw", GLUT_BITMAP_HELVETICA_18);
+    }
+iText(430,260,"Press 'b' to go back to menu",GLUT_BITMAP_HELVETICA_18);
+// update leaderboard
+
+    int goal_diff = fabs(scoreP1 - scoreP2);
+if(leaderboard_update==0)update_leaderboard(goal_diff,player1.name,player2.name);
+leaderboard_update=1;
+sort_leaderboard();
+}
+
+
+
+
+
 
 if (goal) {
   iShowLoadedImage(0, 0, &goalim);  
@@ -577,7 +668,7 @@ void iKeyboard(unsigned char key)
 {
   if(currentState==LEADREBOARD && key=='b') {currentState= MENU;
     iResumeTimer(0);}
-if(taking_input)
+if( currentState==GAME&&taking_input&&!current_game)
 {  
    if(taking_input==1)
    {
@@ -602,9 +693,13 @@ if(taking_input)
     if(key == '\r'){ input_name[input_index] ='\0';
     input_index=0;
     taking_input=0;
+    time_count=0;
     strcpy(player2.name,input_name);
+    input_name[input_index]='\0';
     key = 'a';//the key is at '\r' so enter will be treated as start game if key is '\r'
-    currentState= MENU;
+    currentState= GAME;
+    current_game=1;
+  
     /* now we have to find or add players using these input names.*/
     }
     else if(key =='\b'){
@@ -619,10 +714,53 @@ if(taking_input)
   
 
 }
-if(currentState == MENU && taking_input==0) {
+if(currentState == MENU ) {
         if(key == '\r') { // ENTER pressed
             iPlaySound("assets/sounds/press.wav", false,100);
             if(menuSelection == 0){ 
+                current_game=0;
+                taking_input=1;
+                time_count=0;
+                scoreP1 = 0;
+                scoreP2 = 0;
+                goal=0;
+                goalanicount=0;
+                isShowingGoalAnimation = 0;
+                ball_x1=10,ball_y1=10,radius=15,dx=5,head_x=450,head_x2=550,head_y=100,head_y2=100,head_radius=25;
+                ball_x =500,ball_y=200,ball_touched_ceil=0,ball_shoot=0,kick_off=0,p2_jump=0,up=10,p1_jump=0;
+                leg_top=30 ,leg_top2=30, leg_bottom=0, leg_bottom2=0,dy=3,ball_touched_ground=0,gg_end=0;
+               currentState = GAME;
+               leaderboard_update=0;
+
+
+        
+               iResumeTimer(0);
+            }
+            if(menuSelection == 1) {currentState = GAME;
+               iResumeTimer(0);
+            }
+            if(menuSelection == 2)
+{currentState = PRACTICE;
+  iResumeTimer(0);  
+head_x2 = 800;
+head_y2 = 100;
+leg_top2 = 30;
+leg_bottom2 = 0;
+ball_x = 770;
+ball_y = 150;
+dx = -5; // ball moves left
+kick_off = 0;
+ball_shoot = 0;
+ball_touched_ceil = 0;
+gg_end =0;
+    scoreP2 = 0;}
+
+
+
+             if(menuSelection == 3) {
+             isGoldenGoal=1;
+               current_game=0;
+                taking_input=1;
                 time_count=0;
                 scoreP1 = 0;
                 scoreP2 = 0;
@@ -632,15 +770,18 @@ if(currentState == MENU && taking_input==0) {
                 ball_x1=10,ball_y1=10,radius=15,dx=5,head_x=450,head_x2=550,head_y=100,head_y2=100,head_radius=25;
                 ball_x =500,ball_y=200,ball_touched_ceil=0,ball_shoot=0,kick_off=0,p2_jump=0,up=10,p1_jump=0;
                 leg_top=30 ,leg_top2=30, leg_bottom=0, leg_bottom2=0,dy=3,ball_touched_ground=0;
-               currentState = GAME;
-               leaderboard_update=0;
+              currentState = GAME;
+               leaderboard_update=0,gg_end=0;
+
+
+        
                iResumeTimer(0);
-            }
-            if(menuSelection == 1) {currentState = GAME;
-                iResumeTimer(0);}
-            if(menuSelection == 2) currentState = HELP;
-            if(menuSelection == 3) currentState =LEADREBOARD;
-            if(menuSelection==4) exit(0);
+             }
+
+              if(menuSelection == 4) currentState = LEADREBOARD;
+               if(menuSelection == 5) currentState = HELP;
+            
+            if(menuSelection==6) exit(0);
         }
     }
     
@@ -653,18 +794,18 @@ else if(currentState == GAME) {
     switch (key)
     {
         case 'b':
-    {iPauseTimer(0);  // pause ball movement timer
-    currentState = MENU;
+    {if(!taking_input){iPauseTimer(0);  // pause ball movement timer
+     currentState = MENU;}
     break;}
       
 
-    /*case 'q':{
-        // do something with 'q'
+    case 'p':{
+        // do something with 'p'
         iPauseTimer(0);
-        break;}*/
-   /* case 'r':{
+        break;}
+   case 'r':{
         iResumeTimer(0);
-        break;*/
+        break;
     case '\r':{ iResumeTimer(0);
     break;}
        
@@ -682,15 +823,15 @@ else if(currentState == GAME) {
     break;}
     
     case 'a' :{
-        if(head_x>=30)
+        if(head_x>=110)
         head_x-=30;
-        else head_x = 25;
+        else head_x = 110;
         break;
     }
     case 'd':{
-        if(head_x <= SCREEN_WIDTH - 30)
+        if(head_x <= SCREEN_WIDTH - 120)
         head_x+=30;
-        else head_x = SCREEN_WIDTH - head_radius;
+        else head_x = SCREEN_WIDTH - 120;
         break;
     }
 
@@ -705,27 +846,46 @@ else if(currentState == GAME) {
     }
 }
    
+        }}
+
+else if(currentState == PRACTICE) {
+    switch (key) {
+        case 'b': // back to menu
+            iPauseTimer(0);
+            currentState = MENU;
+            break;
+
+        case 'r': // resume
+            iResumeTimer(0);
+            break;
+            case 'p':
+             iPauseTimer(0);
+             break;
+
+        case 'k': // shoot
+            if((((ball_x > head_x2)? (ball_x - head_x2) : (head_x2 - ball_x) )<=40) &&
+               ball_y <= head_y2 + head_radius && ball_y >= leg_bottom2)
+            {
+                kick_off = 1;
+                ball_shoot = 1;
+                ball_touched_ceil = 0;
+                dx = (dx < 0) ? dx : -dx;
+            }
+            break;
+    }
 }
 }
 
-/*
-function iSpecialKeyboard() is called whenver user hits special keys likefunction
-keys, home, end, pg up, pg down, arraows etc. you have to use
-appropriate constants to detect them. A list is:
-GLUT_KEY_F1, GLUT_KEY_F2, GLUT_KEY_F3, GLUT_KEY_F4, GLUT_KEY_F5, GLUT_KEY_F6,
-GLUT_KEY_F7, GLUT_KEY_F8, GLUT_KEY_F9, GLUT_KEY_F10, GLUT_KEY_F11,
-GLUT_KEY_F12, GLUT_KEY_LEFT, GLUT_KEY_UP, GLUT_KEY_RIGHT, GLUT_KEY_DOWN,
-GLUT_KEY_PAGE_UP, GLUT_KEY_PAGE_DOWN, GLUT_KEY_HOME, GLUT_KEY_END,
-GLUT_KEY_INSERT */
+
 void iSpecialKeyboard(unsigned char key)
 {
      if(currentState == MENU) {
         if(key == GLUT_KEY_DOWN) {
             iPlaySound("assets/sounds/press.wav", false,100);
-            menuSelection = (menuSelection + 1) % 5;
+            menuSelection = (menuSelection + 1) % 7;
         }
         if(key == GLUT_KEY_UP) {iPlaySound("assets/sounds/press.wav", false,100);
-            menuSelection = ((menuSelection - 1 )>=0? menuSelection-1 : menuSelection-1+5) % 5;
+            menuSelection = ((menuSelection - 1 )>=0? menuSelection-1 : menuSelection-1+7) % 7;
         }
     }
 
@@ -740,14 +900,14 @@ void iSpecialKeyboard(unsigned char key)
      p2_jump =1;
     break;}
     case GLUT_KEY_LEFT:{
-      if(head_x2>=30)
+      if(head_x2>=110)
         head_x2-=30;
-        else head_x2 = 25;
+        else head_x2 = 110;
         break;}
     case GLUT_KEY_RIGHT:{
-        if(head_x2 <= SCREEN_WIDTH - 30)
+        if(head_x2 <= SCREEN_WIDTH - 120)
         head_x2+=30;
-        else head_x2 = SCREEN_WIDTH - head_radius;
+        else head_x2 = SCREEN_WIDTH - 120;
         break;
     }
     default:
@@ -755,6 +915,21 @@ void iSpecialKeyboard(unsigned char key)
     }
 
 }
+if(currentState == PRACTICE) {
+    switch (key) {
+        case GLUT_KEY_UP:
+            p2_jump = 1;
+            break;
+        case GLUT_KEY_LEFT:
+            if(head_x2 >= 30) head_x2 -= 30;
+            break;
+        case GLUT_KEY_RIGHT:
+            if(head_x2 <= SCREEN_WIDTH - 30) head_x2 += 30;
+            break;
+    }
+}
+
+
        
     }
 int main(int argc, char *argv[]) {
@@ -772,4 +947,3 @@ int main(int argc, char *argv[]) {
     iInitialize(SCREEN_WIDTH, SCREEN_HEIGHT, "Simple Soccer");
     return 0;
 }
-
