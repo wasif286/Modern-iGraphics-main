@@ -25,7 +25,7 @@ int menuSelection = 0; // 0=Start, 1=Continue ,2=practice,3=golden_goal, 4=Leade
 double ball_x1=10,ball_y1=10,radius=15,dx=5,head_x=450,head_x2=550,head_y=100,head_y2=100,head_radius=25;
 int ball_x =500,ball_y=200,timer_start=0,ball_touched_ceil=0,ball_shoot=0,kick_off=0,p2_jump=0,up=10,p1_jump=0,timer2=0,ball_touched_ground=0;
 double leg_top=30 ,leg_top2=30, leg_bottom=0, leg_bottom2=0,dy=3,time_count=0;
-int leaderboard_update = 0, gg_end= 0;
+int leaderboard_update = 0, gg_end= 0,late=0;
 char input_name[30];
 int input_index= 0,taking_input=0;
 int goal_diff[5];
@@ -320,7 +320,7 @@ void loadResources()
      iResizeImage(&ball, 30, 30);
      iLoadImage(&field, "assets/images/field.png");
      iResizeImage(&field, 1000, 600);
-     iLoadImage(&field2, "assets/images/field.png");
+     iLoadImage(&field2, "assets/images/fieldO.png");
      iResizeImage(&field2, 1000, 600);
 
  
@@ -370,7 +370,7 @@ iText(450,370 , "Practice Match", GLUT_BITMAP_HELVETICA_18);
 if(menuSelection == 3) iSetColor(255, 0, 0); else iSetColor(255, 255, 255);
 iText(450, 330, "Golden Goal", GLUT_BITMAP_HELVETICA_18);
 if(menuSelection == 4) iSetColor(255, 0, 0); else iSetColor(255, 255, 255);
-iText(450, 290, "leaderboard", GLUT_BITMAP_HELVETICA_18);
+iText(450, 290, "Leaderboard", GLUT_BITMAP_HELVETICA_18);
 
 if(menuSelection == 5) iSetColor(255, 0, 0); else iSetColor(255, 255, 255);
 iText(450, 250, "HELP", GLUT_BITMAP_HELVETICA_18);
@@ -381,12 +381,78 @@ iText(450, 210, "EXIT", GLUT_BITMAP_HELVETICA_18);
     }
     
     else if(currentState == HELP) {
-        iSetColor(255, 255, 0);
-        iText(400, 500, "Help / Instructions", GLUT_BITMAP_TIMES_ROMAN_24);
-        iSetColor(255, 255, 255);
-        iText(200, 450, "Player 1 : WASD to move");
-        iText(200, 400, "Player 2 : Arrow Keys to move");
-        iText(400, 200, "Press 'b' to go back to Menu");
+        // iSetColor(255, 255, 0);
+        // iText(400, 500, "Help / Instructions", GLUT_BITMAP_TIMES_ROMAN_24);
+        // iSetColor(255, 255, 255);
+        // iText(200, 450, "Player 1 : WASD to move");
+        // iText(200, 400, "Player 2 : Arrow Keys to move");
+        // iText(400, 200, "Press 'b' to go back to Menu");
+             iSetColor(0, 0, 0);
+    iFilledRectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+
+    int y = SCREEN_HEIGHT - 50;
+    int headerGap = 30;
+    int lineGap = 20;
+
+    // HEADER: Help Menu Title
+    iSetColor(255, 0, 0);
+    const char *header = " 2-Player Football Game - Help Menu";
+
+   // char *header = " 2-Player Football Game - Help Menu";
+    int headerWidth = strlen(header) * 12;
+    iText((SCREEN_WIDTH - headerWidth) / 2, y, header, GLUT_BITMAP_TIMES_ROMAN_24);
+    y -= headerGap * 2;
+
+    // Section: Controls
+    iText((SCREEN_WIDTH - 100)/2, y, "🎮 Controls", GLUT_BITMAP_TIMES_ROMAN_24);
+    y -= headerGap;
+
+    iSetColor(255, 0, 0);
+    iText(80, y, "Player 1: Move - A/D, Jump - W, Kick - F");
+    y -= lineGap;
+    iText(80, y, "Player 2: Move - ←/→, Jump - ↑, Kick - K");
+    y -= lineGap * 2;
+
+    // Section: Game Modes
+    iSetColor(255, 0, 0);
+    iText((SCREEN_WIDTH - 130)/2, y, "🧩 Game Modes", GLUT_BITMAP_TIMES_ROMAN_24);
+    y -= headerGap;
+
+    iText(80, y, "Start Game    - First to 2 goals wins");
+    y -= lineGap;
+    iText(80, y, "Continue Game - Resume last match");
+    y -= lineGap;
+    iText(80, y, "Practice Mode - Free play, no score");
+    y -= lineGap;
+    iText(80, y, "Golden Goal   - First goal wins");
+    y -= lineGap;
+    iText(80, y, "Leaderboard   - Shows top scores with maximum goal difference");
+    y -= lineGap * 2;
+
+    // Section: Rules
+    iSetColor(255, 0, 0);
+    iText((SCREEN_WIDTH - 70)/2, y, "🏁 Rules", GLUT_BITMAP_TIMES_ROMAN_24);
+    y -= headerGap;
+
+    iText(80, y, "Match Time: 90 seconds. Most goals wins.");
+    y -= lineGap;
+    iText(80, y, "Golden Goal: First goal ends match.");
+    y -= lineGap;
+    iText(80, y, "Kick near ball to shoot.");
+    y -= lineGap * 2;
+
+    // Section: Navigation
+    iSetColor(255, 0, 0);
+    iText((SCREEN_WIDTH - 120)/2, y, "🔁 Navigation", GLUT_BITMAP_TIMES_ROMAN_24);
+    y -= headerGap;
+
+    iText(80, y, "Backspace - Return to Main Menu");
+    y -= lineGap;
+    iText(80, y, "ESC       - Exit the Game");
+    y -= lineGap * 2;
+
+    // Footer
+    iText((SCREEN_WIDTH - 180)/2, y, "Enjoy the game and have fun!", GLUT_BITMAP_HELVETICA_18);
     }
     else if(currentState==LEADREBOARD)
     { 
@@ -525,7 +591,7 @@ iText(450, 210, "EXIT", GLUT_BITMAP_HELVETICA_18);
     iText(520, 580, scoreText2, GLUT_BITMAP_HELVETICA_18);
 
 
-if(gg_end )
+if(gg_end && late)
 {
      current_game=0;
 
@@ -534,29 +600,67 @@ if(gg_end )
     char win_text [50];
     iSetColor(0, 0, 0);  // black background/
     iFilledRectangle(100, 30, 800, 540);
-    iSetColor(255, 255, 255);
+//     iSetColor(255, 255, 255);
+
+// if(scoreP1>scoreP2)
+//     {
+//     win_text[0]='\0';
+//     strcpy(win_text,player1.name);
+//     strcat(win_text," has won the match");
+//     iText(490, 320, "HURRAH", GLUT_BITMAP_HELVETICA_18);
+//     iText(420, 290,win_text, GLUT_BITMAP_HELVETICA_18);
+//     }
+// else if(scoreP1<scoreP2)
+//     {
+//     win_text[0]='\0';
+//     strcpy(win_text,player2.name);
+//     strcat(win_text," has won the match");
+//     iText(490, 320, "HURRAH", GLUT_BITMAP_HELVETICA_18);
+//     iText(420, 290,win_text, GLUT_BITMAP_HELVETICA_18);
+//     }
+// else 
+//     { iText(425, 320, "YOU TWO PLAYED WELL", GLUT_BITMAP_HELVETICA_18);
+//     iText(460, 290, "The match is draw", GLUT_BITMAP_HELVETICA_18);
+//     }
+// iText(430,260,"Press 'b' to go back to menu",GLUT_BITMAP_HELVETICA_18);
+// // update leaderboard
+
+ iSetColor(255, 0, 0);
 if(scoreP1>scoreP2)
     {
     win_text[0]='\0';
     strcpy(win_text,player1.name);
     strcat(win_text," has won the match");
-    iText(490, 320, "HURRAH", GLUT_BITMAP_HELVETICA_18);
-    iText(420, 290,win_text, GLUT_BITMAP_HELVETICA_18);
+        int headerWidth = strlen(win_text) * 12;
+
+    iText((SCREEN_WIDTH - 72) / 2, 360, "HURRAH", GLUT_BITMAP_TIMES_ROMAN_24);
+        iText((SCREEN_WIDTH - headerWidth) / 2+30, 290, win_text, GLUT_BITMAP_TIMES_ROMAN_24);
+  //  iText(490, 320, "HURRAH", GLUT_BITMAP_HELVETICA_18);
+   // iText(420, 290,win_text, GLUT_BITMAP_HELVETICA_18);
     }
 else if(scoreP1<scoreP2)
     {
     win_text[0]='\0';
     strcpy(win_text,player2.name);
     strcat(win_text," has won the match");
-    iText(490, 320, "HURRAH", GLUT_BITMAP_HELVETICA_18);
-    iText(420, 290,win_text, GLUT_BITMAP_HELVETICA_18);
+    int headerWidth = strlen(win_text) * 12;
+
+    iText((SCREEN_WIDTH - 72) / 2, 360, "HURRAH", GLUT_BITMAP_TIMES_ROMAN_24);
+        iText((SCREEN_WIDTH - headerWidth) / 2+30, 290, win_text, GLUT_BITMAP_TIMES_ROMAN_24);
+    // iText(490, 320, "HURRAH", GLUT_BITMAP_HELVETICA_18);
+    // iText(420, 290,win_text, GLUT_BITMAP_HELVETICA_18);
     }
-else 
-    { iText(425, 320, "YOU TWO PLAYED WELL", GLUT_BITMAP_HELVETICA_18);
-    iText(460, 290, "The match is draw", GLUT_BITMAP_HELVETICA_18);
+else {
+            iText((SCREEN_WIDTH - 228) / 2, 320,"YOU TWO PLAYED WELL" , GLUT_BITMAP_TIMES_ROMAN_24);
+                    iText((SCREEN_WIDTH - 216) / 2+30, 290, "The match is draw", GLUT_BITMAP_TIMES_ROMAN_24);
+
+    // { iText(425, 320, "YOU TWO PLAYED WELL", GLUT_BITMAP_HELVETICA_18);
+    // iText(460, 290, "The match is draw", GLUT_BITMAP_HELVETICA_18);
     }
-iText(430,260,"Press 'b' to go back to menu",GLUT_BITMAP_HELVETICA_18);
-// update leaderboard
+            iText((SCREEN_WIDTH - 360) / 2+50, 50,"Press 'b' to go back to menu", GLUT_BITMAP_TIMES_ROMAN_24);
+
+
+
 isGoldenGoal=0;
 }
 if(time_count<=90.00){iText(660,580,time,GLUT_BITMAP_HELVETICA_18);}
@@ -569,29 +673,65 @@ if(time_count>90/*||(isGoldenGoal==1&&(scoreP1>=2||scoreP2>=2))*/){
     char win_text [50];
     iSetColor(0, 0, 0);  // black background/
     iFilledRectangle(100, 30, 800, 540);
-    iSetColor(255, 255, 255);
+//     iSetColor(255, 255, 255);
+// if(scoreP1>scoreP2)
+//     {
+//     win_text[0]='\0';
+//     strcpy(win_text,player1.name);
+//     strcat(win_text," has won the match");
+//     iText(490, 320, "HURRAH", GLUT_BITMAP_HELVETICA_18);
+//     iText(420, 290,win_text, GLUT_BITMAP_HELVETICA_18);
+//     }
+// else if(scoreP1<scoreP2)
+//     {
+//     win_text[0]='\0';
+//     strcpy(win_text,player2.name);
+//     strcat(win_text," has won the match");
+//     iText(490, 320, "HURRAH", GLUT_BITMAP_HELVETICA_18);
+//     iText(420, 290,win_text, GLUT_BITMAP_HELVETICA_18);
+//     }
+// else 
+//     { iText(425, 320, "YOU TWO PLAYED WELL", GLUT_BITMAP_HELVETICA_18);
+//     iText(460, 290, "The match is draw", GLUT_BITMAP_HELVETICA_18);
+//     }
+// iText(430,260,"Press 'b' to go back to menu",GLUT_BITMAP_HELVETICA_18);
+// update leaderboard
+
+
+ iSetColor(255, 0, 0);
 if(scoreP1>scoreP2)
     {
     win_text[0]='\0';
     strcpy(win_text,player1.name);
     strcat(win_text," has won the match");
-    iText(490, 320, "HURRAH", GLUT_BITMAP_HELVETICA_18);
-    iText(420, 290,win_text, GLUT_BITMAP_HELVETICA_18);
+        int headerWidth = strlen(win_text) * 12;
+
+    iText((SCREEN_WIDTH - 72) / 2, 360, "HURRAH", GLUT_BITMAP_TIMES_ROMAN_24);
+        iText((SCREEN_WIDTH - headerWidth) / 2+30, 290, win_text, GLUT_BITMAP_TIMES_ROMAN_24);
+  //  iText(490, 320, "HURRAH", GLUT_BITMAP_HELVETICA_18);
+   // iText(420, 290,win_text, GLUT_BITMAP_HELVETICA_18);
     }
 else if(scoreP1<scoreP2)
     {
     win_text[0]='\0';
     strcpy(win_text,player2.name);
     strcat(win_text," has won the match");
-    iText(490, 320, "HURRAH", GLUT_BITMAP_HELVETICA_18);
-    iText(420, 290,win_text, GLUT_BITMAP_HELVETICA_18);
+    int headerWidth = strlen(win_text) * 12;
+
+    iText((SCREEN_WIDTH - 72) / 2, 360, "HURRAH", GLUT_BITMAP_TIMES_ROMAN_24);
+        iText((SCREEN_WIDTH - headerWidth) / 2+30, 290, win_text, GLUT_BITMAP_TIMES_ROMAN_24);
+    // iText(490, 320, "HURRAH", GLUT_BITMAP_HELVETICA_18);
+    // iText(420, 290,win_text, GLUT_BITMAP_HELVETICA_18);
     }
-else 
-    { iText(425, 320, "YOU TWO PLAYED WELL", GLUT_BITMAP_HELVETICA_18);
-    iText(460, 290, "The match is draw", GLUT_BITMAP_HELVETICA_18);
+else {
+            iText((SCREEN_WIDTH - 228) / 2, 320,"YOU TWO PLAYED WELL" , GLUT_BITMAP_TIMES_ROMAN_24);
+                    iText((SCREEN_WIDTH - 216) / 2+30, 290, "The match is draw", GLUT_BITMAP_TIMES_ROMAN_24);
+
+    // { iText(425, 320, "YOU TWO PLAYED WELL", GLUT_BITMAP_HELVETICA_18);
+    // iText(460, 290, "The match is draw", GLUT_BITMAP_HELVETICA_18);
     }
-iText(430,260,"Press 'b' to go back to menu",GLUT_BITMAP_HELVETICA_18);
-// update leaderboard
+            iText((SCREEN_WIDTH - 360) / 2+50, 50,"Press 'b' to go back to menu", GLUT_BITMAP_TIMES_ROMAN_24);
+
 
     int goal_diff = fabs(scoreP1 - scoreP2);
 if(leaderboard_update==0)update_leaderboard(goal_diff,player1.name,player2.name);
@@ -611,7 +751,9 @@ if (goal) {
 
   if (goalanicount <=0) { 
     goal = 0;   isShowingGoalAnimation = 0;
-     goalanicount = 0;}
+     goalanicount = 0;
+    late=1;
+    }
     
 }
 
@@ -728,7 +870,7 @@ if(currentState == MENU ) {
                 isShowingGoalAnimation = 0;
                 ball_x1=10,ball_y1=10,radius=15,dx=5,head_x=450,head_x2=550,head_y=100,head_y2=100,head_radius=25;
                 ball_x =500,ball_y=200,ball_touched_ceil=0,ball_shoot=0,kick_off=0,p2_jump=0,up=10,p1_jump=0;
-                leg_top=30 ,leg_top2=30, leg_bottom=0, leg_bottom2=0,dy=3,ball_touched_ground=0,gg_end=0;
+                leg_top=30 ,leg_top2=30, leg_bottom=0, leg_bottom2=0,dy=3,ball_touched_ground=0,gg_end=0,late=0;
                currentState = GAME;
                leaderboard_update=0;
 
@@ -771,7 +913,7 @@ gg_end =0;
                 ball_x =500,ball_y=200,ball_touched_ceil=0,ball_shoot=0,kick_off=0,p2_jump=0,up=10,p1_jump=0;
                 leg_top=30 ,leg_top2=30, leg_bottom=0, leg_bottom2=0,dy=3,ball_touched_ground=0;
               currentState = GAME;
-               leaderboard_update=0,gg_end=0;
+               leaderboard_update=0,gg_end=0,late=0;
 
 
         
